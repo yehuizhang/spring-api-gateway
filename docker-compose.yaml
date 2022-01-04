@@ -1,0 +1,75 @@
+version: "3.9"
+
+services:
+  naming-server:
+    image: yehuizhang/java-spring-learning-naming-server:0.0.1-SNAPSHOT
+    ports:
+      - "8761:8761"
+    networks:
+      - currency-network
+    deploy:
+      resources:
+        limits:
+          memory: 700M
+  currency-exchange:
+    image: yehuizhang/java-spring-learning-currency-exchange-service:0.0.1-SNAPSHOT
+    ports:
+      - "8000:8000"
+    networks:
+      - currency-network
+    depends_on:
+      - naming-server
+    deploy:
+      resources:
+        limits:
+          memory: 700M
+    environment:
+      SPRING.ZIPKIN.BASEURL: http://zipkin:9411/
+  currency-conversion:
+    image: yehuizhang/java-spring-learning-currency-conversion-service:0.0.1-SNAPSHOT
+    ports:
+      - "8100:8100"
+    networks:
+      - currency-network
+    depends_on:
+      - naming-server
+    deploy:
+      resources:
+        limits:
+          memory: 700M
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      SPRING.ZIPKIN.BASEURL: http://zipkin:9411/
+  api-gateway:
+    image: yehuizhang/java-spring-learning-api-gateway:0.0.1-SNAPSHOT
+    ports:
+      - "8765:8765"
+    networks:
+      - currency-network
+    depends_on:
+      - naming-server
+      - currency-exchange
+      - currency-conversion
+    deploy:
+      resources:
+        limits:
+          memory: 700M
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      SPRING.ZIPKIN.BASEURL: http://zipkin:9411/
+  zipkin:
+    image: openzipkin/zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - currency-network
+    depends_on:
+      - api-gateway
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+
+networks:
+  currency-network:
