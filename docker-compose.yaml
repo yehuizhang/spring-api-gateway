@@ -19,12 +19,16 @@ services:
       - currency-network
     depends_on:
       - naming-server
+      - rabbitmq
     deploy:
       resources:
         limits:
           memory: 700M
     environment:
       SPRING.ZIPKIN.BASEURL: http://zipkin:9411/
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
   currency-conversion:
     image: yehuizhang/java-spring-learning-currency-conversion-service:0.0.1-SNAPSHOT
     ports:
@@ -33,6 +37,7 @@ services:
       - currency-network
     depends_on:
       - naming-server
+      - rabbitmq
     deploy:
       resources:
         limits:
@@ -40,6 +45,9 @@ services:
     environment:
       EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
       SPRING.ZIPKIN.BASEURL: http://zipkin:9411/
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
   api-gateway:
     image: yehuizhang/java-spring-learning-api-gateway:0.0.1-SNAPSHOT
     ports:
@@ -48,6 +56,7 @@ services:
       - currency-network
     depends_on:
       - naming-server
+      - rabbitmq
       - currency-exchange
       - currency-conversion
     deploy:
@@ -57,6 +66,20 @@ services:
     environment:
       EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
       SPRING.ZIPKIN.BASEURL: http://zipkin:9411/
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - currency-network
+    deploy:
+      resources:
+        limits:
+          memory: 300M
   zipkin:
     image: openzipkin/zipkin
     ports:
@@ -65,7 +88,10 @@ services:
       - currency-network
     depends_on:
       - api-gateway
+      - rabbit-mq
     restart: always
+    environment:
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
     deploy:
       resources:
         limits:
